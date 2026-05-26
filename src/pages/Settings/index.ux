@@ -1,0 +1,170 @@
+<template>
+  <div class="page">
+    <div class="header">
+      <div class="back-btn" @click="goBack"><text class="back-icon">←</text></div>
+      <text class="header-title">设置</text>
+    </div>
+
+    <list class="settings-list">
+      <list-item type="reminder" class="section">
+        <text class="section-title">提醒时间</text>
+        <text class="section-desc">课前提醒的分钟数</text>
+        <div class="option-row">
+          <div class="option-btn {{ reminderMin === $item.value ? 'option-active' : '' }}" for="{{ reminderOptions }}" @click="setReminder($item.value)">
+            <text class="option-text">{{ $item.label }}</text>
+          </div>
+        </div>
+      </list-item>
+
+      <list-item type="url-import" class="section">
+        <text class="section-title">网络下载课表</text>
+        <text class="section-desc">手机开HTTP Server后输入地址下载</text>
+        <input class="url-input" type="text" value="{{ urlText }}" onchange="urlText = $event.value" placeholder="http://192.168.x.x:8080/courses.json" />
+        <div class="btn-row"><div class="fetch-btn" @click="fetchCourses"><text class="fetch-btn-text">下载导入</text></div></div>
+        <text class="import-status" if="{{ fetchStatus }}">{{ fetchStatus }}</text>
+      </list-item>
+
+      <list-item type="import" class="section">
+        <text class="section-title">粘贴导入课表</text>
+        <text class="section-desc">手机编辑器生成JSON后粘贴</text>
+        <textarea class="import-input" value="{{ importText }}" onchange="importText = $event.value" placeholder="粘贴JSON数据" rows="3"></textarea>
+        <div class="btn-row"><div class="import-btn" @click="importCourses"><text class="import-btn-text">导入课表</text></div></div>
+        <text class="import-status" if="{{ importStatus }}">{{ importStatus }}</text>
+      </list-item>
+
+      <list-item type="course-count" class="section" if="{{ courseCount > 0 }}">
+        <text class="count-text">当前共 {{ courseCount }} 门课程</text>
+      </list-item>
+
+      <list-item type="clear" class="section">
+        <div class="clear-btn" @click="clearAllCourses"><text class="clear-btn-text">清空所有课程</text></div>
+      </list-item>
+    </list>
+  </div>
+</template>
+
+<script>
+import storage from '@blueos.storage.storage'
+import router from '@blueos.app.appmanager.router'
+import prompt from '@blueos.window.prompt'
+import fetchApi from '@blueos.communication.network.fetch'
+
+export default {
+  data: {
+    reminderMin: 5, importText: '', importStatus: '', urlText: '', fetchStatus: '', courseCount: 0,
+    reminderOptions: [
+      { label: '5分钟', value: 5 },{ label: '10分钟', value: 10 },
+      { label: '15分钟', value: 15 },{ label: '30分钟', value: 30 }
+    ]
+  },
+
+  onInit() { this.loadSettings(); this.loadCourseCount() },
+  onShow() { this.loadCourseCount() },
+
+  loadSettings() {
+    try { const val = storage.getSync({ key: 'reminderMin' }); if (val) this.reminderMin = parseInt(val) } catch (e) {}
+  },
+
+  loadCourseCount() {
+    try {
+      const d = storage.getSync({ key: 'courses' })
+      this.courseCount = d ? JSON.parse(d).length : 0
+    } catch (e) { this.courseCount = 0 }
+  },
+
+  setReminder(val) {
+    this.reminderMin = val
+    try { storage.set({ key: 'reminderMin', value: String(val) }); prompt.showToast({ message: '已设为课前' + val + '分钟提醒' }) }
+    catch (e) { prompt.showToast({ message: '设置失败' }) }
+  },
+
+  fetchCourses() {
+    if (!this.urlText) { prompt.showToast({ message: '请输入下载地址' }); return }
+    this.fetchStatus = '正在下载...'
+    try {
+      fetchApi.fetch({
+        url: this.urlText, method: 'GET', responseType: 'json', timeout: 15000,
+        success: (response) => {
+          let newCourses = response.data
+          if (typeof newCourses === 'string') { try { newCourses = JSON.parse(newCourses) } catch (e) {} }
+          if (!Array.isArray(newCourses) || newCourses.length === 0) {
+            this.fetchStatus = '下载数据格式错误'; prompt.showToast({ message: '数据格式错误' }); return
+          }
+          for (let i = 0; i < newCourses.length; i++) {
+            const c = newCourses[i]
+            if (!c.name || !c.dayOfWeek || !c.startTime || !c.endTime) { this.fetchStatus = '第' + (i + 1) + '条缺少必填字段'; return }
+            c.id = c.id || ('c_' + Date.now() + '_' + i)
+            c.weeks = c.weeks || [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16]
+            c.color = c.color || '#4CAF50'
+          }
+          let existing = []
+          try { const d = storage.getSync({ key: 'courses' }); if (d) existing = JSON.parse(d) } catch (e) {}
+          const merged = existing.concat(newCourses)
+          storage.set({ key: 'courses', value: JSON.stringify(merged) })
+          this.courseCount = merged.length; this.urlText = ''
+          this.fetchStatus = '下载成功，共' + newCourses.length + '门课程'; prompt.showToast({ message: '下载成功' })
+        },
+        fail: (data, code) => { this.fetchStatus = '下载失败, code=' + code; prompt.showToast({ message: '下载失败' }) },
+        complete: () => {},
+      })
+    } catch (e) { this.fetchStatus = '下载失败'; prompt.showToast({ message: '下载失败' }) }
+  },
+
+  importCourses() {
+    if (!this.importText) { prompt.showToast({ message: '请粘贴课表数据' }); return }
+    try {
+      const newCourses = JSON.parse(this.importText)
+      if (!Array.isArray(newCourses)) { this.importStatus = '格式错误：需要JSON数组'; return }
+      if (newCourses.length === 0) { this.importStatus = '课表数据为空'; return }
+      for (let i = 0; i < newCourses.length; i++) {
+        const c = newCourses[i]
+        if (!c.name || !c.dayOfWeek || !c.startTime || !c.endTime) { this.importStatus = '第' + (i + 1) + '条缺少必填字段'; return }
+        c.id = c.id || ('c_' + Date.now() + '_' + i)
+        c.weeks = c.weeks || [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16]
+        c.color = c.color || '#4CAF50'
+      }
+      let existing = []
+      try { const d = storage.getSync({ key: 'courses' }); if (d) existing = JSON.parse(d) } catch (e) {}
+      const merged = existing.concat(newCourses)
+      storage.set({ key: 'courses', value: JSON.stringify(merged) })
+      this.courseCount = merged.length; this.importText = ''
+      this.importStatus = '成功导入' + newCourses.length + '门课程'; prompt.showToast({ message: '导入成功' })
+    } catch (e) { this.importStatus = 'JSON格式错误'; prompt.showToast({ message: 'JSON格式错误' }) }
+  },
+
+  clearAllCourses() {
+    try { storage.set({ key: 'courses', value: '[]' }); this.courseCount = 0; this.importStatus = ''; prompt.showToast({ message: '已清空所有课程' }) }
+    catch (e) { prompt.showToast({ message: '清空失败' }) }
+  },
+
+  goBack() { router.back() }
+}
+</script>
+
+<style>
+.page{flex-direction:column;width:390px;height:450px;background-color:#000}
+.header{flex-direction:row;align-items:center;padding:10px}
+.back-btn{width:32px;height:32px;justify-content:center;align-items:center}
+.back-icon{color:#fff;font-size:22px}
+.header-title{color:#fff;font-size:18px;font-weight:bold;margin-left:8px}
+.settings-list{flex-direction:column;padding-left:12px;padding-right:12px}
+.section{flex-direction:column;padding-top:10px;padding-bottom:10px;border-bottom-width:1px;border-bottom-color:#222}
+.section-title{color:#fff;font-size:15px;font-weight:bold;margin-bottom:4px}
+.section-desc{color:#888;font-size:12px;margin-bottom:8px}
+.option-row{flex-direction:row;flex-wrap:wrap}
+.option-btn{width:72px;height:32px;border-radius:16px;justify-content:center;align-items:center;background-color:#1a1a1a;margin-right:8px;margin-bottom:4px}
+.option-active{background-color:#4CAF50}
+.option-text{color:#ccc;font-size:13px}
+.option-active .option-text{color:#fff}
+.import-input{color:#fff;font-size:11px;background-color:#1a1a1a;border-radius:6px;padding:6px;height:56px}
+.url-input{color:#fff;font-size:12px;height:34px;background-color:#1a1a1a;border-radius:6px;padding-left:8px;padding-right:8px}
+.btn-row{flex-direction:row;justify-content:center;margin-top:6px;margin-bottom:4px}
+.import-btn{height:34px;border-radius:17px;background-color:#2196F3;justify-content:center;align-items:center;padding-left:24px;padding-right:24px}
+.import-btn-text{color:#fff;font-size:14px}
+.fetch-btn{height:34px;border-radius:17px;background-color:#FF9800;justify-content:center;align-items:center;padding-left:24px;padding-right:24px}
+.fetch-btn-text{color:#fff;font-size:14px}
+.import-status{color:#aaa;font-size:12px;margin-top:4px;text-align:center}
+.count-text{color:#4CAF50;font-size:14px;font-weight:bold}
+.clear-btn{height:36px;border-radius:18px;background-color:#331111;justify-content:center;align-items:center;margin-top:4px}
+.clear-btn-text{color:#f44;font-size:14px}
+</style>

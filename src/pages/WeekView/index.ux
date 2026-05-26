@@ -1,0 +1,107 @@
+<template>
+  <div class="page">
+    <div class="header">
+      <div class="back-btn" @click="goBack"><text class="back-icon">←</text></div>
+      <text class="header-title">周课程表</text>
+    </div>
+
+    <div class="week-grid">
+      <div class="grid-header">
+        <div class="time-col"><text class="col-text">时间</text></div>
+        <div class="day-col {{ currentDayIdx === $idx ? 'today-col' : '' }}" for="{{ dayHeaders }}"><text class="col-text">{{ $item }}</text></div>
+      </div>
+
+      <list class="grid-body">
+        <list-item type="timerow" for="{{ timeSlots }}" tid="key" class="time-row">
+          <div class="time-col"><text class="time-label">{{ $item.label }}</text><text class="time-sub">{{ $item.time }}</text></div>
+          <div class="day-col {{ currentDayIdx === $idx2 ? 'today-col' : '' }}" for="{{ dayIndices }}" tid="">
+            <div class="cell" if="{{ getCourseAt($idx, $idx2) }}">
+              <div class="cell-block" style="background-color: {{ getCourseAt($idx, $idx2).color || '#4CAF50' }}">
+                <text class="cell-name">{{ getCourseAt($idx, $idx2).name }}</text>
+                <text class="cell-room" if="{{ getCourseAt($idx, $idx2).location }}">{{ getCourseAt($idx, $idx2).location }}</text>
+              </div>
+            </div>
+          </div>
+        </list-item>
+      </list>
+    </div>
+  </div>
+</template>
+
+<script>
+import storage from '@blueos.storage.storage'
+import router from '@blueos.app.appmanager.router'
+
+export default {
+  data: {
+    courses: [], dayHeaders: ['一','二','三','四','五','六','日'], dayIndices: [0,1,2,3,4,5,6],
+    currentDayIdx: 0,
+    timeSlots: [
+      { key:'slot1', label:'第1节', time:'8:00' },{ key:'slot2', label:'第2节', time:'8:55' },
+      { key:'slot3', label:'第3节', time:'10:20' },{ key:'slot4', label:'第4节', time:'11:15' },
+      { key:'slot5', label:'第5节', time:'14:30' },{ key:'slot6', label:'第6节', time:'15:25' },
+      { key:'slot7', label:'第7节', time:'16:25' },{ key:'slot8', label:'第8节', time:'17:15' }
+    ],
+    slotTimeRanges: [
+      { start:'08:00', end:'08:45' },{ start:'08:55', end:'09:40' },
+      { start:'10:20', end:'11:05' },{ start:'11:15', end:'12:00' },
+      { start:'14:30', end:'15:15' },{ start:'15:25', end:'16:10' },
+      { start:'16:25', end:'17:10' },{ start:'17:15', end:'18:00' }
+    ],
+    grid: []
+  },
+
+  onInit() {
+    const now = new Date()
+    this.currentDayIdx = (now.getDay() === 0 ? 6 : now.getDay() - 1)
+    this.loadCourses()
+  },
+
+  onShow() { this.loadCourses() },
+
+  loadCourses() {
+    try {
+      const data = storage.getSync({ key: 'courses' })
+      if (data) { this.courses = JSON.parse(data) } else { this.courses = [] }
+    } catch (e) { this.courses = [] }
+    this.buildGrid()
+  },
+
+  buildGrid() {
+    const grid = []
+    for (let s = 0; s < 8; s++) {
+      grid[s] = []
+      const range = this.slotTimeRanges[s]
+      for (let d = 1; d <= 7; d++) {
+        grid[s][d - 1] = this.courses.find(c => c.dayOfWeek === d && c.startTime <= range.end && c.endTime > range.start) || null
+      }
+    }
+    this.grid = grid
+  },
+
+  getCourseAt(slotIdx, dayIdx) { return this.grid[slotIdx] ? this.grid[slotIdx][dayIdx] : null },
+  goBack() { router.back() }
+}
+</script>
+
+<style>
+.page{flex-direction:column;width:390px;height:450px;background-color:#000}
+.header{flex-direction:row;align-items:center;padding:10px}
+.back-btn{width:32px;height:32px;justify-content:center;align-items:center}
+.back-icon{color:#fff;font-size:22px}
+.header-title{color:#fff;font-size:18px;font-weight:bold;margin-left:8px}
+.week-grid{flex-direction:column;height:408px}
+.grid-header{flex-direction:row;padding-left:4px;padding-right:4px;padding-bottom:4px;border-bottom-width:1px;border-bottom-color:#333}
+.time-col{width:52px;justify-content:center;align-items:center;flex-direction:column}
+.day-col{width:48px;justify-content:center;align-items:center}
+.today-col{background-color:rgba(76,175,80,0.15);border-radius:4px}
+.col-text{color:#aaa;font-size:12px}
+.grid-body{flex-direction:column;height:384px}
+.time-row{flex-direction:row;padding-left:4px;padding-right:4px;height:48px}
+.time-label{color:#888;font-size:10px}
+.time-sub{color:#666;font-size:9px}
+.cell{width:48px;justify-content:center;align-items:center;padding-left:1px;padding-right:1px}
+.cell-block{flex-direction:column;justify-content:center;align-items:center;border-radius:4px;padding-left:2px;padding-right:2px;width:100%;height:100%}
+.cell-name{color:#fff;font-size:9px;font-weight:bold;lines:1;text-overflow:ellipsis;text-align:center}
+.cell-room{color:rgba(255,255,255,0.8);font-size:8px;lines:1;text-overflow:ellipsis;text-align:center}
+</style>

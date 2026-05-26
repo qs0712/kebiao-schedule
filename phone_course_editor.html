@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>课表编辑器 - IQ WATCH GT</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,sans-serif;background:#1a1a2e;color:#eee;padding:12px;max-width:500px;margin:0 auto}
+h1{text-align:center;font-size:18px;margin-bottom:10px;color:#4CAF50}
+h2{font-size:15px;color:#fff;margin:12px 0 6px}
+.form-group{margin-bottom:8px}
+label{display:block;font-size:13px;color:#aaa;margin-bottom:2px}
+input,select{width:100%;padding:8px;border:1px solid #333;border-radius:6px;background:#16213e;color:#fff;font-size:14px}
+.row{display:flex;gap:6px}
+.row>div{flex:1}
+.btn{display:block;width:100%;padding:10px;border:none;border-radius:6px;font-size:15px;cursor:pointer;margin-top:6px;font-weight:bold}
+.btn-add{background:#4CAF50;color:#fff}
+.btn-del{background:#e74c3c;color:#fff;padding:4px 10px;font-size:12px;width:auto;border-radius:4px}
+.course-item{background:#16213e;border-radius:6px;padding:8px 10px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center}
+.course-item .name{font-weight:bold;font-size:14px}
+.course-item .detail{font-size:12px;color:#888;margin-top:2px}
+.output-area{margin-top:10px;background:#0f3460;border-radius:8px;padding:12px;display:none}
+textarea{width:100%;height:80px;background:#0a0a1e;color:#0f0;border:1px solid #333;border-radius:6px;padding:6px;font-size:11px;font-family:monospace;resize:none;margin-bottom:6px}
+.instructions,.step{font-size:13px;color:#ccc;line-height:2}
+.step{background:#1a2a1e;border-left:3px solid #4CAF50;padding:8px 10px;margin:6px 0;border-radius:0 6px 6px 0}
+.step b{color:#4CAF50}
+code{background:#0a0a1e;padding:2px 6px;border-radius:4px;color:#4CAF50;font-size:12px}
+.btn-down{background:#FF9800;color:#fff}
+.btn-copy{background:#607D8B;color:#fff}
+.url-box{background:#0a0a1e;color:#FF9800;padding:10px;border-radius:6px;text-align:center;font-size:16px;font-weight:bold;margin:8px 0;word-break:break-all;border:2px dashed #FF9800}
+</style>
+</head>
+<body>
+
+<h1>IQ WATCH GT 课表编辑器</h1>
+
+<h2>编辑课表</h2>
+<div class="form-group"><label>课程名称 *</label><input type="text" id="name" placeholder="如：高等数学"></div>
+<div class="row">
+  <div class="form-group"><label>星期 *</label>
+    <select id="day"><option value="1">周一</option><option value="2">周二</option><option value="3">周三</option><option value="4">周四</option><option value="5">周五</option><option value="6">周六</option><option value="7">周日</option></select></div>
+  <div class="form-group"><label>颜色</label>
+    <select id="color"><option value="#4CAF50">绿色</option><option value="#2196F3">蓝色</option><option value="#FF9800">橙色</option><option value="#E91E63">粉色</option><option value="#9C27B0">紫色</option><option value="#00BCD4">青色</option></select></div>
+</div>
+<div class="row">
+  <div class="form-group"><label>开始时间 *</label><input type="time" id="startTime" value="08:00"></div>
+  <div class="form-group"><label>结束时间 *</label><input type="time" id="endTime" value="08:45"></div>
+</div>
+<div class="row">
+  <div class="form-group"><label>教室</label><input type="text" id="location" placeholder="如：A101"></div>
+  <div class="form-group"><label>老师</label><input type="text" id="teacher" placeholder="如：张老师"></div>
+</div>
+<button class="btn btn-add" onclick="addCourse()">+ 添加课程</button>
+
+<div class="course-list" id="courseList"></div>
+
+<button class="btn btn-down" onclick="generateAndDownload()">生成课表 → 下载到手机</button>
+
+<div class="output-area" id="outputArea">
+  <h2>传送到手表</h2>
+
+  <div class="step" style="background:#1a1a2e;border-left-color:#FF9800">
+    <b>已下载文件：</b><code>courses.json</code> &nbsp;→ 保存在手机 <b>Download</b> 文件夹
+  </div>
+
+  <div style="margin:10px 0;color:#aaa;text-align:center">选一种方式传到手表</div>
+
+  <div class="step">
+    <b>推荐：手机 HTTP Server</b><br>
+    1. Play商店搜 <b>"Simple HTTP Server"</b> 安装<br>
+    2. 打开 App → 文件夹图标 → 选 <b>Download</b> → 启动<br>
+    3. App 显示地址如：<br>
+    <div class="url-box">http://192.168.x.x:8080</div>
+    4. 手表 Settings → 网络下载课表 → 输入:<br>
+    <code>http://192.168.x.x:8080/courses.json</code>
+  </div>
+
+  <div class="step">
+    <b>备选：GitHub Gist</b><br>
+    1. 打开 gist.github.com → 粘贴 JSON<br>
+    2. 文件名 <code>courses.json</code> → Create → 点 <b>Raw</b><br>
+    3. 复制 Raw 页面 URL → 手表下载
+    <button class="btn btn-copy" onclick="copyJSON()" style="margin-top:6px">复制 JSON</button>
+  </div>
+
+  <div class="step">
+    <b>应急：粘贴导入</b> — 手表 Settings → 粘贴导入 → 粘贴下方 JSON
+  </div>
+
+  <textarea id="jsonOutput" readonly></textarea>
+</div>
+
+<script>
+let courses = JSON.parse(localStorage.getItem('watchCourses') || '[]');
+render();
+
+function addCourse(){
+  const name=document.getElementById('name').value.trim();
+  if(!name){alert('请输入课程名称');return}
+  const st=document.getElementById('startTime').value,et=document.getElementById('endTime').value;
+  if(!st||!et){alert('请选择时间');return}
+  if(st>=et){alert('结束时间须晚于开始时间');return}
+  courses.push({name,dayOfWeek:parseInt(document.getElementById('day').value),startTime:st,endTime:et,location:document.getElementById('location').value.trim(),teacher:document.getElementById('teacher').value.trim(),color:document.getElementById('color').value});
+  save();render();
+  document.getElementById('name').value='';document.getElementById('location').value='';document.getElementById('teacher').value='';
+}
+function removeCourse(i){courses.splice(i,1);save();render()}
+function save(){localStorage.setItem('watchCourses',JSON.stringify(courses))}
+function render(){
+  const days=['','周一','周二','周三','周四','周五','周六','周日'];
+  const el=document.getElementById('courseList');
+  if(!courses.length){el.innerHTML='<p style="color:#666;text-align:center;margin-top:16px">暂无课程，请在上方添加</p>';return}
+  el.innerHTML=courses.map((c,i)=>'<div class="course-item"><div><div class="name" style="color:'+c.color+'">'+c.name+'</div><div class="detail">'+days[c.dayOfWeek]+' '+c.startTime+'-'+c.endTime+(c.location?' | '+c.location:'')+(c.teacher?' | '+c.teacher:'')+'</div></div><button class="btn btn-del" onclick="removeCourse('+i+')">删除</button></div>').join('')
+}
+function generateAndDownload(){
+  if(!courses.length){alert('请先添加课程');return}
+  const data=courses.map(c=>({name:c.name,dayOfWeek:c.dayOfWeek,startTime:c.startTime,endTime:c.endTime,location:c.location||'',teacher:c.teacher||'',color:c.color||'#4CAF50'}));
+  const json=JSON.stringify(data);
+  document.getElementById('jsonOutput').value=json;
+  document.getElementById('outputArea').style.display='block';
+  document.getElementById('outputArea').scrollIntoView({behavior:'smooth'});
+  const blob=new Blob([json],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='courses.json';a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+}
+function copyJSON(){const ta=document.getElementById('jsonOutput');ta.select();document.execCommand('copy');alert('JSON 已复制')}
+</script>
+</body>
+</html>

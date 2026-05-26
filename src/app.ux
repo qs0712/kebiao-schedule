@@ -1,0 +1,106 @@
+<template>
+  <div>
+  </div>
+</template>
+
+<script>
+import storage from '@blueos.storage.storage'
+import notification from '@blueos.app.notification.notificationManager'
+import schedule from '@blueos.app.appmanager.schedule'
+
+export default {
+  onCreate() {
+    console.log('App onCreate')
+    this.setupReminderJob()
+  },
+
+  onDestroy() {
+    console.log('App onDestroy')
+  },
+
+  setupReminderJob() {
+    try {
+      const now = new Date()
+      const nextMin = new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours(), now.getMinutes() + 1, 0, 0)
+      schedule.scheduleJob({
+        type: 1,
+        timeout: nextMin.getTime(),
+        interval: 60000,
+        triggerMethod: 'checkAndNotify',
+        success: function (data) {
+          console.log('scheduleJob success, id=' + data.id)
+        },
+        fail: function (data, code) {
+          console.log('scheduleJob fail, code=' + code)
+        },
+        complete: function () {},
+      })
+    } catch (e) {
+      console.log('scheduleJob error:', e)
+    }
+  },
+
+  checkAndNotify() {
+    try {
+      const coursesJson = storage.getSync({ key: 'courses' })
+      if (!coursesJson) return
+      const courses = JSON.parse(coursesJson)
+
+      let reminderMin = 5
+      try {
+        const rm = storage.getSync({ key: 'reminderMin' })
+        if (rm) reminderMin = parseInt(rm)
+      } catch (e) {}
+
+      const now = new Date()
+      const dayOfWeek = now.getDay() === 0 ? 7 : now.getDay()
+      const currentHour = now.getHours()
+      const currentMinute = now.getMinutes()
+      const currentTimeStr = (currentHour < 10 ? '0' : '') + currentHour + ':' + (currentMinute < 10 ? '0' : '') + currentMinute
+
+      const todayCourses = courses.filter(c => c.dayOfWeek === dayOfWeek)
+      todayCourses.sort((a, b) => a.startTime.localeCompare(b.startTime))
+
+      for (const course of todayCourses) {
+        const parts = course.startTime.split(':')
+        const courseHour = parseInt(parts[0])
+        const courseMin = parseInt(parts[1])
+        let notifyMin = courseMin - reminderMin
+        let notifyHour = courseHour
+        if (notifyMin < 0) {
+          notifyMin += 60
+          notifyHour -= 1
+        }
+        if (notifyHour < 0) notifyHour += 24
+        const notifyTimeStr = (notifyHour < 10 ? '0' : '') + notifyHour + ':' + (notifyMin < 10 ? '0' : '') + notifyMin
+
+        if (notifyTimeStr === currentTimeStr) {
+          notification.publish({
+            request: {
+              icon: '/assets/images/logo.png',
+              contentType: 1,
+              content: {
+                title: course.name,
+                text: reminderMin + '分钟后开始' + (course.location ? ' @ ' + course.location : ''),
+              },
+              channel: 2,
+              deliveryTime: Date.now(),
+            },
+            success: function () {},
+            fail: function (data, code) {
+              console.log('notification fail, code=' + code)
+            },
+            complete: function () {},
+          })
+          break
+        }
+      }
+    } catch (e) {
+      console.log('checkAndNotify error:', e)
+    }
+  }
+}
+</script>
+
+<style>
+</style>

@@ -1,0 +1,149 @@
+<template>
+  <div class="page">
+    <div class="header">
+      <text class="header-title">课表提醒</text>
+      <text class="header-date">{{ currentDate }}</text>
+    </div>
+
+    <div class="weekday-bar">
+      <div class="weekday-item {{ currentDay === 1 ? 'active' : '' }}" for="{{ weekdays }}" @click="switchDay($item.value)">
+        <text class="weekday-text">{{ $item.label }}</text>
+      </div>
+    </div>
+
+    <list class="course-list" if="{{ todayCourses.length > 0 }}">
+      <list-item type="course" for="{{ todayCourses }}" tid="id" class="course-item" @click="editCourse($item)">
+        <div class="course-left" style="background-color: {{ $item.color || '#4CAF50' }}">
+          <text class="course-index">{{ $idx + 1 }}</text>
+        </div>
+        <div class="course-info">
+          <text class="course-name">{{ $item.name }}</text>
+          <div class="course-detail">
+            <text class="course-time">{{ $item.startTime }} - {{ $item.endTime }}</text>
+          </div>
+          <div class="course-detail" if="{{ $item.location }}">
+            <text class="course-location">{{ $item.location }}</text>
+          </div>
+          <div class="course-detail" if="{{ $item.teacher }}">
+            <text class="course-teacher">{{ $item.teacher }}</text>
+          </div>
+        </div>
+        <div class="course-delete" @click="deleteCourse($item.id, $event)">
+          <text class="delete-icon">×</text>
+        </div>
+      </list-item>
+    </list>
+
+    <div class="empty-state" if="{{ todayCourses.length === 0 }}">
+      <text class="empty-icon">📚</text>
+      <text class="empty-text">今天没有课程</text>
+    </div>
+
+    <div class="footer">
+      <div class="btn btn-add" @click="goAddCourse">
+        <text class="btn-text">+ 添加课程</text>
+      </div>
+      <div class="btn btn-week" @click="goWeekView">
+        <text class="btn-text">周视图</text>
+      </div>
+      <div class="btn btn-settings" @click="goSettings">
+        <text class="btn-text">设置</text>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script>
+import storage from '@blueos.storage.storage'
+import router from '@blueos.app.appmanager.router'
+import prompt from '@blueos.window.prompt'
+
+export default {
+  data: {
+    courses: [],
+    currentDay: 1,
+    currentDate: '',
+    todayCourses: [],
+    weekdays: [
+      { label: '一', value: 1 }, { label: '二', value: 2 }, { label: '三', value: 3 },
+      { label: '四', value: 4 }, { label: '五', value: 5 }, { label: '六', value: 6 }, { label: '日', value: 7 }
+    ]
+  },
+
+  onInit() {
+    const now = new Date()
+    const day = now.getDay() === 0 ? 7 : now.getDay()
+    this.currentDay = day
+    const month = now.getMonth() + 1
+    const date = now.getDate()
+    this.currentDate = month + '月' + date + '日'
+  },
+
+  onShow() { this.loadCourses() },
+
+  loadCourses() {
+    try {
+      const data = storage.getSync({ key: 'courses' })
+      if (data) { this.courses = JSON.parse(data) }
+      else { this.courses = [] }
+    } catch (e) { this.courses = [] }
+    this.filterTodayCourses()
+  },
+
+  filterTodayCourses() {
+    const day = this.currentDay
+    this.todayCourses = this.courses.filter(c => c.dayOfWeek === day).sort((a, b) => a.startTime.localeCompare(b.startTime))
+  },
+
+  switchDay(day) { this.currentDay = day; this.filterTodayCourses() },
+
+  goAddCourse() { router.push({ uri: 'pages/AddCourse' }) },
+  goWeekView() { router.push({ uri: 'pages/WeekView' }) },
+  goSettings() { router.push({ uri: 'pages/Settings' }) },
+
+  editCourse(course) { router.push({ uri: 'pages/AddCourse', params: { editId: course.id } }) },
+
+  deleteCourse(id, evt) {
+    if (evt) { evt.stopPropagation && evt.stopPropagation() }
+    this.courses = this.courses.filter(c => c.id !== id)
+    try {
+      storage.set({ key: 'courses', value: JSON.stringify(this.courses) })
+      this.filterTodayCourses()
+      prompt.showToast({ message: '已删除' })
+    } catch (e) { prompt.showToast({ message: '删除失败' }) }
+  }
+}
+</script>
+
+<style>
+.page { flex-direction: column; width: 390px; height: 450px; background-color: #000000; padding: 0px; }
+.header { flex-direction: column; align-items: center; padding-top: 12px; padding-bottom: 6px; }
+.header-title { color: #ffffff; font-size: 20px; font-weight: bold; }
+.header-date { color: #aaaaaa; font-size: 13px; margin-top: 2px; }
+.weekday-bar { flex-direction: row; justify-content: space-around; padding-left: 8px; padding-right: 8px; padding-top: 4px; padding-bottom: 4px; }
+.weekday-item { width: 44px; height: 30px; border-radius: 15px; justify-content: center; align-items: center; background-color: #1a1a1a; }
+.weekday-item.active { background-color: #4CAF50; }
+.weekday-text { color: #cccccc; font-size: 14px; }
+.weekday-item.active .weekday-text { color: #ffffff; }
+.course-list { flex-direction: column; padding-left: 10px; padding-right: 10px; padding-top: 4px; }
+.course-item { flex-direction: row; align-items: center; background-color: #1a1a1a; border-radius: 10px; margin-bottom: 8px; padding: 8px; height: 72px; }
+.course-left { width: 36px; height: 36px; border-radius: 18px; justify-content: center; align-items: center; }
+.course-index { color: #ffffff; font-size: 16px; font-weight: bold; }
+.course-info { flex-direction: column; margin-left: 10px; }
+.course-name { color: #ffffff; font-size: 16px; font-weight: bold; lines: 1; text-overflow: ellipsis; }
+.course-detail { flex-direction: row; margin-top: 2px; }
+.course-time { color: #aaaaaa; font-size: 12px; }
+.course-location { color: #888888; font-size: 12px; }
+.course-teacher { color: #888888; font-size: 12px; }
+.course-delete { width: 28px; height: 28px; justify-content: center; align-items: center; }
+.delete-icon { color: #ff4444; font-size: 22px; }
+.empty-state { flex-direction: column; justify-content: center; align-items: center; }
+.empty-icon { font-size: 40px; }
+.empty-text { color: #666666; font-size: 15px; margin-top: 10px; }
+.footer { flex-direction: row; justify-content: center; padding: 10px; padding-bottom: 16px; }
+.btn { height: 36px; border-radius: 18px; justify-content: center; align-items: center; padding-left: 20px; padding-right: 20px; margin-left: 8px; margin-right: 8px; }
+.btn-add { background-color: #4CAF50; }
+.btn-week { background-color: #2196F3; }
+.btn-settings { background-color: #607D8B; }
+.btn-text { color: #ffffff; font-size: 14px; }
+</style>

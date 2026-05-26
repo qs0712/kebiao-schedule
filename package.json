@@ -1,0 +1,9 @@
+{
+  "name": "kebiao-schedule",
+  "version": "1.0.0",
+  "description": "课表提醒 BlueOS 手表应用",
+  "scripts": {
+    "build": "blueos build",
+    "dev": "blueos dev"
+  }
+}

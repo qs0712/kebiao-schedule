@@ -1,0 +1,168 @@
+<template>
+  <div class="page">
+    <div class="header">
+      <div class="back-btn" @click="goBack"><text class="back-icon">←</text></div>
+      <text class="header-title">{{ editId ? '编辑课程' : '添加课程' }}</text>
+    </div>
+
+    <list class="form-list">
+      <list-item type="field" class="form-item">
+        <text class="form-label">课程名称</text>
+        <input class="form-input" type="text" value="{{ courseName }}" onchange="courseName = $event.value" placeholder="输入课程名称" />
+      </list-item>
+      <list-item type="field" class="form-item">
+        <text class="form-label">星期</text>
+        <div class="day-picker">
+          <div class="day-btn {{ selectedDay === $item.value ? 'active' : '' }}" for="{{ dayOptions }}" @click="selectedDay = $item.value">
+            <text class="day-btn-text">{{ $item.label }}</text>
+          </div>
+        </div>
+      </list-item>
+      <list-item type="field" class="form-item">
+        <text class="form-label">开始时间</text>
+        <picker type="time" selected="{{ startTime }}" onchange="startTime = $event.value">
+          <text class="form-value {{ startTime ? '' : 'placeholder' }}">{{ startTime || '选择时间' }}</text>
+        </picker>
+      </list-item>
+      <list-item type="field" class="form-item">
+        <text class="form-label">结束时间</text>
+        <picker type="time" selected="{{ endTime }}" onchange="endTime = $event.value">
+          <text class="form-value {{ endTime ? '' : 'placeholder' }}">{{ endTime || '选择时间' }}</text>
+        </picker>
+      </list-item>
+      <list-item type="field" class="form-item">
+        <text class="form-label">教室</text>
+        <input class="form-input" type="text" value="{{ location }}" onchange="location = $event.value" placeholder="输入教室" />
+      </list-item>
+      <list-item type="field" class="form-item">
+        <text class="form-label">老师</text>
+        <input class="form-input" type="text" value="{{ teacher }}" onchange="teacher = $event.value" placeholder="输入老师姓名" />
+      </list-item>
+      <list-item type="color" class="form-item">
+        <text class="form-label">颜色</text>
+        <div class="color-picker">
+          <div class="color-dot {{ selectedColor === $item ? 'color-active' : '' }}" for="{{ colorOptions }}" style="background-color: {{ $item }}" @click="selectedColor = $item">
+            <text class="color-check" if="{{ selectedColor === $item }}">✓</text>
+          </div>
+        </div>
+      </list-item>
+      <list-item type="weeks" class="form-item">
+        <text class="form-label">教学周</text>
+        <div class="weeks-picker">
+          <div class="week-btn {{ selectedWeeks.indexOf($item) >= 0 ? 'active' : '' }}" for="{{ weekRange }}" @click="toggleWeek($item)">
+            <text class="week-btn-text">{{ $item }}</text>
+          </div>
+        </div>
+      </list-item>
+    </list>
+
+    <div class="footer">
+      <div class="save-btn" @click="saveCourse">
+        <text class="save-btn-text">{{ editId ? '保存修改' : '添加课程' }}</text>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script>
+import storage from '@blueos.storage.storage'
+import router from '@blueos.app.appmanager.router'
+import prompt from '@blueos.window.prompt'
+
+export default {
+  data: {
+    editId: null, courseName: '', selectedDay: 1, startTime: '', endTime: '',
+    location: '', teacher: '', selectedColor: '#4CAF50', selectedWeeks: [],
+    weekRange: [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16],
+    dayOptions: [
+      { label: '一', value: 1 },{ label: '二', value: 2 },{ label: '三', value: 3 },
+      { label: '四', value: 4 },{ label: '五', value: 5 },{ label: '六', value: 6 },{ label: '日', value: 7 }
+    ],
+    colorOptions: ['#4CAF50','#2196F3','#FF9800','#E91E63','#9C27B0','#00BCD4','#FF5722','#607D8B']
+  },
+
+  onInit() { if (this.editId) { this.loadCourseData() } },
+
+  loadCourseData() {
+    try {
+      const data = storage.getSync({ key: 'courses' })
+      if (!data) return
+      const courses = JSON.parse(data)
+      const course = courses.find(c => c.id === this.editId)
+      if (course) {
+        this.courseName=course.name; this.selectedDay=course.dayOfWeek;
+        this.startTime=course.startTime; this.endTime=course.endTime;
+        this.location=course.location||''; this.teacher=course.teacher||'';
+        this.selectedColor=course.color||'#4CAF50'; this.selectedWeeks=course.weeks||[]
+      }
+    } catch (e) {}
+  },
+
+  toggleWeek(week) {
+    const idx = this.selectedWeeks.indexOf(week)
+    if (idx >= 0) { this.selectedWeeks = this.selectedWeeks.filter(w => w !== week) }
+    else { this.selectedWeeks = this.selectedWeeks.concat([week]) }
+  },
+
+  goBack() { router.back() },
+
+  saveCourse() {
+    if (!this.courseName) { prompt.showToast({ message: '请输入课程名称' }); return }
+    if (!this.startTime) { prompt.showToast({ message: '请选择开始时间' }); return }
+    if (!this.endTime) { prompt.showToast({ message: '请选择结束时间' }); return }
+    if (this.startTime >= this.endTime) { prompt.showToast({ message: '结束时间须晚于开始时间' }); return }
+
+    let courses = []
+    try { const d = storage.getSync({ key: 'courses' }); if (d) courses = JSON.parse(d) } catch (e) {}
+
+    const course = {
+      id: this.editId || ('c_' + Date.now()),
+      name: this.courseName, dayOfWeek: this.selectedDay,
+      startTime: this.startTime, endTime: this.endTime,
+      location: this.location, teacher: this.teacher,
+      weeks: this.selectedWeeks.length > 0 ? this.selectedWeeks : this.weekRange,
+      color: this.selectedColor
+    }
+
+    if (this.editId) { courses = courses.map(c => c.id === this.editId ? course : c) }
+    else { courses.push(course) }
+
+    try {
+      storage.set({ key: 'courses', value: JSON.stringify(courses) })
+      prompt.showToast({ message: this.editId ? '已保存' : '已添加' })
+      router.back()
+    } catch (e) { prompt.showToast({ message: '保存失败' }) }
+  }
+}
+</script>
+
+<style>
+.page{flex-direction:column;width:390px;height:450px;background-color:#000000}
+.header{flex-direction:row;align-items:center;padding:10px;padding-top:12px}
+.back-btn{width:32px;height:32px;justify-content:center;align-items:center}
+.back-icon{color:#fff;font-size:22px}
+.header-title{color:#fff;font-size:18px;font-weight:bold;margin-left:8px}
+.form-list{flex-direction:column;padding-left:12px;padding-right:12px}
+.form-item{flex-direction:column;padding-top:8px;padding-bottom:8px;border-bottom-width:1px;border-bottom-color:#222}
+.form-label{color:#aaa;font-size:13px;margin-bottom:4px}
+.form-input{color:#fff;font-size:16px;height:32px;background-color:#1a1a1a;border-radius:6px;padding-left:8px;padding-right:8px}
+.form-value{color:#fff;font-size:16px;height:32px;line-height:32px;background-color:#1a1a1a;border-radius:6px;padding-left:8px;padding-right:8px}
+.form-value.placeholder{color:#666}
+.day-picker{flex-direction:row;flex-wrap:wrap}
+.day-btn{width:44px;height:30px;border-radius:15px;justify-content:center;align-items:center;background-color:#1a1a1a;margin-right:6px;margin-bottom:4px}
+.day-btn.active{background-color:#4CAF50}
+.day-btn-text{color:#ccc;font-size:14px}
+.day-btn.active .day-btn-text{color:#fff}
+.color-picker{flex-direction:row;flex-wrap:wrap}
+.color-dot{width:28px;height:28px;border-radius:14px;margin-right:8px;margin-bottom:4px;justify-content:center;align-items:center}
+.color-active{border-width:2px;border-color:#fff}
+.color-check{color:#fff;font-size:14px}
+.weeks-picker{flex-direction:row;flex-wrap:wrap}
+.week-btn{width:36px;height:28px;border-radius:6px;justify-content:center;align-items:center;background-color:#1a1a1a;margin-right:4px;margin-bottom:4px}
+.week-btn.active{background-color:#2196F3}
+.week-btn-text{color:#ccc;font-size:12px}
+.week-btn.active .week-btn-text{color:#fff}
+.footer{padding:10px;padding-bottom:16px;justify-content:center}
+.save-btn{height:40px;border-radius:20px;background-color:#4CAF50;justify-content:center;align-items:center}
+.save-btn-text{color:#fff;font-size:16px;font-weight:bold}
+</style>

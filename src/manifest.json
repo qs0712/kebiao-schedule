@@ -1,0 +1,48 @@
+{
+  "package": "com.kebiao.schedule",
+  "name": "课表提醒",
+  "icon": "/assets/images/logo.png",
+  "versionName": "1.0.0",
+  "versionCode": 1,
+  "appCategory": ["education"],
+  "features": [
+    { "name": "blueos.storage.storage" },
+    { "name": "blueos.app.notification.notificationManager" },
+    { "name": "blueos.app.appmanager.schedule" },
+    { "name": "blueos.window.prompt" },
+    { "name": "blueos.app.appmanager.router" },
+    { "name": "blueos.hardware.vibrator.vibrator" },
+    { "name": "blueos.communication.network.fetch" }
+  ],
+  "permissions": [],
+  "config": {
+    "designWidth": 390,
+    "background": {
+      "features": [
+        "blueos.app.appmanager.schedule"
+      ]
+    }
+  },
+  "router": {
+    "entry": "pages/Schedule",
+    "pages": {
+      "pages/Schedule": {
+        "component": "index",
+        "launchMode": "singleTask"
+      },
+      "pages/AddCourse": {
+        "component": "index"
+      },
+      "pages/WeekView": {
+        "component": "index"
+      },
+      "pages/Settings": {
+        "component": "index"
+      }
+    }
+  },
+  "deviceTypeList": ["watch-square"],
+  "display": {
+    "backgroundColor": "#000000"
+  }
+}
