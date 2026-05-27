@@ -6,26 +6,24 @@
     </div>
 
     <div class="weekday-bar">
-      <div class="weekday-item {{ currentDay === $item.value ? 'active' : '' }}" for="{{ weekdays }}" onclick="switchDay($item.value)">
-        <text class="weekday-text">{{ $item.label }}</text>
+      <div class="weekday-item" style="background-color: {{ currentDay === $item.value ? '#64B5F6' : '#1a1a1a' }}" for="{{ weekdays }}" onclick="switchDay($item.value)">
+        <text class="weekday-text" style="color: {{ currentDay === $item.value ? '#ffffff' : '#cccccc' }}">{{ $item.label }}</text>
       </div>
     </div>
 
     <list class="course-list" if="{{ todayCourses.length > 0 }}">
-      <list-item type="course" for="{{ todayCourses }}" tid="id" class="course-item" onclick="editCourse($item)">
+      <list-item type="course" for="{{ todayCourses }}" tid="id" class="course-item">
         <div class="course-left" style="background-color: {{ $item.color || '#4CAF50' }}">
-          <text class="course-index">{{ $idx + 1 }}</text>
+          <text class="course-index">{{ $item.periodNum }}</text>
         </div>
         <div class="course-info">
-          <text class="course-name">{{ $item.name }}</text>
-          <div class="course-detail">
+          <div class="info-row">
+            <text class="course-name">{{ $item.name }}</text>
+            <text class="course-location" if="{{ $item.location }}">{{ $item.location }}</text>
+          </div>
+          <div class="info-row">
             <text class="course-time">{{ $item.startTime }} - {{ $item.endTime }}</text>
-          </div>
-          <div class="course-detail" if="{{ $item.location }}">
-            <text class="course-location">{{ $item.location }}</text>
-          </div>
-          <div class="course-detail" if="{{ $item.teacher }}">
-            <text class="course-teacher">{{ $item.teacher }}</text>
+            <text class="course-teacher" if="{{ $item.teacher }}">{{ $item.teacher }}</text>
           </div>
         </div>
         <div class="course-delete" onclick="deleteCourse($item.id, $event)">
@@ -40,12 +38,6 @@
     </div>
 
     <div class="footer">
-      <div class="btn btn-add" onclick="goAddCourse">
-        <text class="btn-text">+ 添加课程</text>
-      </div>
-      <div class="btn btn-week" onclick="goWeekView">
-        <text class="btn-text">周视图</text>
-      </div>
       <div class="btn btn-settings" onclick="goSettings">
         <text class="btn-text">设置</text>
       </div>
@@ -57,6 +49,13 @@
 import storage from '@blueos.storage.storage'
 import router from '@blueos.app.appmanager.router'
 import prompt from '@blueos.window.prompt'
+
+var periodRanges = [
+  { start:'08:00', end:'08:45' },{ start:'08:55', end:'09:40' },
+  { start:'10:20', end:'11:05' },{ start:'11:15', end:'12:00' },
+  { start:'14:30', end:'15:15' },{ start:'15:25', end:'16:10' },
+  { start:'16:25', end:'17:10' },{ start:'17:15', end:'18:00' }
+]
 
 export default {
   data: {
@@ -92,16 +91,20 @@ export default {
 
   filterTodayCourses() {
     const day = this.currentDay
-    this.todayCourses = this.courses.filter(c => c.dayOfWeek === day).sort((a, b) => a.startTime.localeCompare(b.startTime))
+    const sorted = this.courses.filter(c => c.dayOfWeek === day).sort((a, b) => a.startTime.localeCompare(b.startTime))
+    for (let j = 0; j < sorted.length; j++) {
+      const c = sorted[j]
+      let p = 0
+      for (let i = 0; i < periodRanges.length; i++) {
+        if (c.startTime === periodRanges[i].start) { p = Math.ceil((i + 1) / 2); break }
+      }
+      sorted[j].periodNum = p
+    }
+    this.todayCourses = sorted
   },
 
-  switchDay(day) { this.currentDay = day; this.filterTodayCourses() },
-
-  goAddCourse() { router.push({ uri: 'pages/AddCourse' }) },
-  goWeekView() { router.push({ uri: 'pages/WeekView' }) },
+  switchDay(day) { this.$set('currentDay', day); this.filterTodayCourses() },
   goSettings() { router.push({ uri: 'pages/Settings' }) },
-
-  editCourse(course) { router.push({ uri: 'pages/AddCourse', params: { editId: course.id } }) },
 
   deleteCourse(id, evt) {
     if (evt) { evt.stopPropagation && evt.stopPropagation() }
@@ -121,29 +124,25 @@ export default {
 .header-title { color: #ffffff; font-size: 20px; font-weight: bold; }
 .header-date { color: #aaaaaa; font-size: 13px; margin-top: 2px; }
 .weekday-bar { flex-direction: row; justify-content: space-around; padding-left: 8px; padding-right: 8px; padding-top: 4px; padding-bottom: 4px; }
-.weekday-item { width: 44px; height: 30px; border-radius: 15px; justify-content: center; align-items: center; background-color: #1a1a1a; }
-.weekday-item.active { background-color: #64B5F6; }
-.weekday-text { color: #cccccc; font-size: 14px; }
-.weekday-item.active .weekday-text { color: #ffffff; }
+.weekday-item { width: 44px; height: 30px; border-radius: 15px; justify-content: center; align-items: center; }
+.weekday-text { font-size: 14px; }
 .course-list { flex-direction: column; padding-left: 10px; padding-right: 10px; padding-top: 4px; }
-.course-item { flex-direction: row; align-items: center; background-color: #1a1a1a; border-radius: 10px; margin-bottom: 8px; padding: 8px; height: 72px; }
+.course-item { flex-direction: row; align-items: center; background-color: #1a1a1a; border-radius: 10px; margin-bottom: 6px; padding: 8px; height: 56px; }
 .course-left { width: 36px; height: 36px; border-radius: 18px; justify-content: center; align-items: center; }
 .course-index { color: #ffffff; font-size: 16px; font-weight: bold; }
-.course-info { flex-direction: column; margin-left: 10px; }
-.course-name { color: #ffffff; font-size: 16px; font-weight: bold; lines: 1; text-overflow: ellipsis; }
-.course-detail { flex-direction: row; margin-top: 2px; }
+.course-info { flex-direction: column; margin-left: 10px; width: 270px; justify-content: center; }
+.info-row { flex-direction: row; justify-content: space-between; align-items: center; margin-top: 2px; }
+.course-name { color: #ffffff; font-size: 15px; font-weight: bold; lines: 1; text-overflow: ellipsis; }
 .course-time { color: #aaaaaa; font-size: 12px; }
-.course-location { color: #888888; font-size: 12px; }
-.course-teacher { color: #888888; font-size: 12px; }
-.course-delete { width: 28px; height: 28px; justify-content: center; align-items: center; }
+.course-location { color: #888888; font-size: 12px; text-align: right; }
+.course-teacher { color: #888888; font-size: 12px; text-align: right; }
+.course-delete { width: 28px; height: 28px; justify-content: center; align-items: center; margin-left: 6px; }
 .delete-icon { color: #ff4444; font-size: 22px; }
 .empty-state { flex-direction: column; justify-content: center; align-items: center; }
 .empty-icon { font-size: 40px; }
 .empty-text { color: #666666; font-size: 15px; margin-top: 10px; }
 .footer { flex-direction: row; justify-content: center; padding: 10px; padding-bottom: 16px; }
-.btn { height: 36px; border-radius: 18px; justify-content: center; align-items: center; padding-left: 20px; padding-right: 20px; margin-left: 8px; margin-right: 8px; }
-.btn-add { background-color: #4CAF50; }
-.btn-week { background-color: #2196F3; }
+.btn { height: 36px; border-radius: 18px; justify-content: center; align-items: center; padding-left: 24px; padding-right: 24px; }
 .btn-settings { background-color: #607D8B; }
 .btn-text { color: #ffffff; font-size: 14px; }
 </style>
