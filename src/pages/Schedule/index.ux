@@ -6,7 +6,7 @@
     </div>
 
     <div class="weekday-bar">
-      <div class="weekday-item {{ currentDay === 1 ? 'active' : '' }}" for="{{ weekdays }}" onclick="switchDay($item.value)">
+      <div class="weekday-item {{ currentDay === $item.value ? 'active' : '' }}" for="{{ weekdays }}" onclick="switchDay($item.value)">
         <text class="weekday-text">{{ $item.label }}</text>
       </div>
     </div>
@@ -122,7 +122,7 @@ export default {
 .header-date { color: #aaaaaa; font-size: 13px; margin-top: 2px; }
 .weekday-bar { flex-direction: row; justify-content: space-around; padding-left: 8px; padding-right: 8px; padding-top: 4px; padding-bottom: 4px; }
 .weekday-item { width: 44px; height: 30px; border-radius: 15px; justify-content: center; align-items: center; background-color: #1a1a1a; }
-.weekday-item.active { background-color: #4CAF50; }
+.weekday-item.active { background-color: #64B5F6; }
 .weekday-text { color: #cccccc; font-size: 14px; }
 .weekday-item.active .weekday-text { color: #ffffff; }
 .course-list { flex-direction: column; padding-left: 10px; padding-right: 10px; padding-top: 4px; }

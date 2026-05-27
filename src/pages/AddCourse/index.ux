@@ -158,7 +158,7 @@ export default {
 .form-value.placeholder{color:#666}
 .day-picker{flex-direction:row;flex-wrap:wrap}
 .day-btn{width:44px;height:30px;border-radius:15px;justify-content:center;align-items:center;background-color:#1a1a1a;margin-right:6px;margin-bottom:4px}
-.day-btn.active{background-color:#4CAF50}
+.day-btn.active{background-color:#64B5F6}
 .day-btn-text{color:#ccc;font-size:14px}
 .day-btn.active .day-btn-text{color:#fff}
 .color-picker{flex-direction:row;flex-wrap:wrap}

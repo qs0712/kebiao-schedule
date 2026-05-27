@@ -12,7 +12,8 @@
     { "name": "blueos.window.prompt" },
     { "name": "blueos.app.appmanager.router" },
     { "name": "blueos.hardware.vibrator.vibrator" },
-    { "name": "blueos.communication.network.fetch" }
+    { "name": "blueos.network.fetch" },
+    { "name": "blueos.network.request" }
   ],
   "permissions": [],
   "config": {

@@ -52,9 +52,11 @@
 
 <script>
 import storage from '@blueos.storage.storage'
+import fileApi from '@blueos.storage.file'
 import router from '@blueos.app.appmanager.router'
 import prompt from '@blueos.window.prompt'
-import fetchApi from '@blueos.communication.network.fetch'
+import requestApi from '@blueos.network.request'
+import fetchApi from '@blueos.network.fetch'
 
 export default {
   data: {
@@ -143,7 +145,35 @@ export default {
   },
 
   fetchOrbitV() {
-    this.orbitvStatus = '正在连接 OrbitV...'
+    this.orbitvStatus = '正在从手机拉取...'
+    // Try request.download() first - same API as 简阅
+    try {
+      requestApi.download({
+        url: 'http://127.0.0.1:23101/book/download?id=courses.txt',
+        filename: 'kebiao_sync.json',
+        success: (data) => {
+          requestApi.onDownloadComplete({
+            token: data.token,
+            success: (dlData) => {
+              const uri = dlData.uri || 'internal://files/kebiao_sync.json'
+              try {
+                fileApi.readText({
+                  uri: uri,
+                  success: (result) => { this.parseAndImport(result.text) },
+                  fail: () => { this.orbitvStatus = '读取文件失败'; this.tryFetchFallback() },
+                })
+              } catch (e) { this.tryFetchFallback() }
+            },
+            fail: () => { this.tryFetchFallback() },
+          })
+        },
+        fail: () => { this.tryFetchFallback() },
+      })
+    } catch (e) { this.tryFetchFallback() }
+  },
+
+  tryFetchFallback() {
+    this.orbitvStatus = '尝试直接连接...'
     const listUrl = 'http://127.0.0.1:23101/book/list'
     try {
       fetchApi.fetch({
