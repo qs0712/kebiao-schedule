@@ -8,7 +8,7 @@
     <list class="form-list">
       <list-item type="field" class="form-item">
         <text class="form-label">课程名称</text>
-        <input class="form-input" type="text" value="{{ courseName }}" onchange="courseName = $event.value" placeholder="输入课程名称" />
+        <input class="form-input" type="text" value="{{ courseName }}" onchange="onNameChange" placeholder="输入课程名称" />
       </list-item>
       <list-item type="field" class="form-item">
         <text class="form-label">星期</text>
@@ -20,23 +20,23 @@
       </list-item>
       <list-item type="field" class="form-item">
         <text class="form-label">开始时间</text>
-        <picker type="time" selected="{{ startTime }}" onchange="startTime = $event.value">
+        <picker type="time" selected="{{ startTime }}" onchange="onStartTimeChange">
           <text class="form-value {{ startTime ? '' : 'placeholder' }}">{{ startTime || '选择时间' }}</text>
         </picker>
       </list-item>
       <list-item type="field" class="form-item">
         <text class="form-label">结束时间</text>
-        <picker type="time" selected="{{ endTime }}" onchange="endTime = $event.value">
+        <picker type="time" selected="{{ endTime }}" onchange="onEndTimeChange">
           <text class="form-value {{ endTime ? '' : 'placeholder' }}">{{ endTime || '选择时间' }}</text>
         </picker>
       </list-item>
       <list-item type="field" class="form-item">
         <text class="form-label">教室</text>
-        <input class="form-input" type="text" value="{{ location }}" onchange="location = $event.value" placeholder="输入教室" />
+        <input class="form-input" type="text" value="{{ location }}" onchange="onLocationChange" placeholder="输入教室" />
       </list-item>
       <list-item type="field" class="form-item">
         <text class="form-label">老师</text>
-        <input class="form-input" type="text" value="{{ teacher }}" onchange="teacher = $event.value" placeholder="输入老师姓名" />
+        <input class="form-input" type="text" value="{{ teacher }}" onchange="onTeacherChange" placeholder="输入老师姓名" />
       </list-item>
       <list-item type="color" class="form-item">
         <text class="form-label">颜色</text>
@@ -82,6 +82,12 @@ export default {
   },
 
   onInit() { if (this.editId) { this.loadCourseData() } },
+
+  onNameChange({ value }) { this.courseName = value },
+  onStartTimeChange({ value }) { this.startTime = value },
+  onEndTimeChange({ value }) { this.endTime = value },
+  onLocationChange({ value }) { this.location = value },
+  onTeacherChange({ value }) { this.teacher = value },
 
   loadCourseData() {
     try {

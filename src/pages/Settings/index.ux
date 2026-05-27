@@ -26,7 +26,7 @@
       <list-item type="url-import" class="section">
         <text class="section-title">网络下载课表</text>
         <text class="section-desc">手机开HTTP Server后输入地址下载</text>
-        <input class="url-input" type="text" value="{{ urlText }}" onchange="urlText = $event.value" placeholder="http://192.168.x.x:8080/courses.json" />
+        <input class="url-input" type="text" value="{{ urlText }}" onchange="onUrlChange" placeholder="http://192.168.x.x:8080/courses.json" />
         <div class="btn-row"><div class="fetch-btn" @click="fetchCourses"><text class="fetch-btn-text">下载导入</text></div></div>
         <text class="import-status" if="{{ fetchStatus }}">{{ fetchStatus }}</text>
       </list-item>
@@ -34,7 +34,7 @@
       <list-item type="import" class="section">
         <text class="section-title">粘贴导入课表</text>
         <text class="section-desc">手机编辑器生成JSON后粘贴</text>
-        <textarea class="import-input" value="{{ importText }}" onchange="importText = $event.value" placeholder="粘贴JSON数据" rows="3"></textarea>
+        <textarea class="import-input" value="{{ importText }}" onchange="onImportChange" placeholder="粘贴JSON数据" rows="3"></textarea>
         <div class="btn-row"><div class="import-btn" @click="importCourses"><text class="import-btn-text">导入课表</text></div></div>
         <text class="import-status" if="{{ importStatus }}">{{ importStatus }}</text>
       </list-item>
@@ -67,6 +67,9 @@ export default {
 
   onInit() { this.loadSettings(); this.loadCourseCount() },
   onShow() { this.loadCourseCount() },
+
+  onUrlChange({ value }) { this.urlText = value },
+  onImportChange({ value }) { this.importText = value },
 
   loadSettings() {
     try { const val = storage.getSync({ key: 'reminderMin' }); if (val) this.reminderMin = parseInt(val) } catch (e) {}
