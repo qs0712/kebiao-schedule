@@ -1,7 +1,7 @@
 <template>
   <div class="page">
     <div class="header">
-      <div class="back-btn" @click="goBack"><text class="back-icon">←</text></div>
+      <div class="back-btn" onclick="goBack"><text class="back-icon">←</text></div>
       <text class="header-title">周课程表</text>
     </div>
 

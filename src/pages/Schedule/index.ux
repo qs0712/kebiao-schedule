@@ -6,13 +6,13 @@
     </div>
 
     <div class="weekday-bar">
-      <div class="weekday-item {{ currentDay === 1 ? 'active' : '' }}" for="{{ weekdays }}" @click="switchDay($item.value)">
+      <div class="weekday-item {{ currentDay === 1 ? 'active' : '' }}" for="{{ weekdays }}" onclick="switchDay($item.value)">
         <text class="weekday-text">{{ $item.label }}</text>
       </div>
     </div>
 
     <list class="course-list" if="{{ todayCourses.length > 0 }}">
-      <list-item type="course" for="{{ todayCourses }}" tid="id" class="course-item" @click="editCourse($item)">
+      <list-item type="course" for="{{ todayCourses }}" tid="id" class="course-item" onclick="editCourse($item)">
         <div class="course-left" style="background-color: {{ $item.color || '#4CAF50' }}">
           <text class="course-index">{{ $idx + 1 }}</text>
         </div>
@@ -28,7 +28,7 @@
             <text class="course-teacher">{{ $item.teacher }}</text>
           </div>
         </div>
-        <div class="course-delete" @click="deleteCourse($item.id, $event)">
+        <div class="course-delete" onclick="deleteCourse($item.id, $event)">
           <text class="delete-icon">×</text>
         </div>
       </list-item>
@@ -40,13 +40,13 @@
     </div>
 
     <div class="footer">
-      <div class="btn btn-add" @click="goAddCourse">
+      <div class="btn btn-add" onclick="goAddCourse">
         <text class="btn-text">+ 添加课程</text>
       </div>
-      <div class="btn btn-week" @click="goWeekView">
+      <div class="btn btn-week" onclick="goWeekView">
         <text class="btn-text">周视图</text>
       </div>
-      <div class="btn btn-settings" @click="goSettings">
+      <div class="btn btn-settings" onclick="goSettings">
         <text class="btn-text">设置</text>
       </div>
     </div>

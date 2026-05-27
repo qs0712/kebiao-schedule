@@ -1,7 +1,7 @@
 <template>
   <div class="page">
     <div class="header">
-      <div class="back-btn" @click="goBack"><text class="back-icon">←</text></div>
+      <div class="back-btn" onclick="goBack"><text class="back-icon">←</text></div>
       <text class="header-title">设置</text>
     </div>
 
@@ -10,7 +10,7 @@
         <text class="section-title">提醒时间</text>
         <text class="section-desc">课前提醒的分钟数</text>
         <div class="option-row">
-          <div class="option-btn {{ reminderMin === $item.value ? 'option-active' : '' }}" for="{{ reminderOptions }}" @click="setReminder($item.value)">
+          <div class="option-btn {{ reminderMin === $item.value ? 'option-active' : '' }}" for="{{ reminderOptions }}" onclick="setReminder($item.value)">
             <text class="option-text">{{ $item.label }}</text>
           </div>
         </div>
@@ -19,7 +19,7 @@
       <list-item type="orbitv" class="section">
         <text class="section-title">从 OrbitV 导入课表</text>
         <text class="section-desc">手机OrbitV发送.txt文件后，手表通过蓝牙隧道拉取</text>
-        <div class="btn-row"><div class="orbitv-btn" @click="fetchOrbitV"><text class="orbitv-btn-text">从 OrbitV 拉取</text></div></div>
+        <div class="btn-row"><div class="orbitv-btn" onclick="fetchOrbitV"><text class="orbitv-btn-text">从 OrbitV 拉取</text></div></div>
         <text class="import-status" if="{{ orbitvStatus }}">{{ orbitvStatus }}</text>
       </list-item>
 
@@ -27,7 +27,7 @@
         <text class="section-title">网络下载课表</text>
         <text class="section-desc">手机开HTTP Server后输入地址下载</text>
         <input class="url-input" type="text" value="{{ urlText }}" onchange="onUrlChange" placeholder="http://192.168.x.x:8080/courses.json" />
-        <div class="btn-row"><div class="fetch-btn" @click="fetchCourses"><text class="fetch-btn-text">下载导入</text></div></div>
+        <div class="btn-row"><div class="fetch-btn" onclick="fetchCourses"><text class="fetch-btn-text">下载导入</text></div></div>
         <text class="import-status" if="{{ fetchStatus }}">{{ fetchStatus }}</text>
       </list-item>
 
@@ -35,7 +35,7 @@
         <text class="section-title">粘贴导入课表</text>
         <text class="section-desc">手机编辑器生成JSON后粘贴</text>
         <textarea class="import-input" value="{{ importText }}" onchange="onImportChange" placeholder="粘贴JSON数据" rows="3"></textarea>
-        <div class="btn-row"><div class="import-btn" @click="importCourses"><text class="import-btn-text">导入课表</text></div></div>
+        <div class="btn-row"><div class="import-btn" onclick="importCourses"><text class="import-btn-text">导入课表</text></div></div>
         <text class="import-status" if="{{ importStatus }}">{{ importStatus }}</text>
       </list-item>
 
@@ -44,7 +44,7 @@
       </list-item>
 
       <list-item type="clear" class="section">
-        <div class="clear-btn" @click="clearAllCourses"><text class="clear-btn-text">清空所有课程</text></div>
+        <div class="clear-btn" onclick="clearAllCourses"><text class="clear-btn-text">清空所有课程</text></div>
       </list-item>
     </list>
   </div>
