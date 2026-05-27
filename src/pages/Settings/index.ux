@@ -16,6 +16,13 @@
         </div>
       </list-item>
 
+      <list-item type="orbitv" class="section">
+        <text class="section-title">从 OrbitV 导入课表</text>
+        <text class="section-desc">手机OrbitV发送.txt文件后，手表通过蓝牙隧道拉取</text>
+        <div class="btn-row"><div class="orbitv-btn" @click="fetchOrbitV"><text class="orbitv-btn-text">从 OrbitV 拉取</text></div></div>
+        <text class="import-status" if="{{ orbitvStatus }}">{{ orbitvStatus }}</text>
+      </list-item>
+
       <list-item type="url-import" class="section">
         <text class="section-title">网络下载课表</text>
         <text class="section-desc">手机开HTTP Server后输入地址下载</text>
@@ -51,7 +58,7 @@ import fetchApi from '@blueos.communication.network.fetch'
 
 export default {
   data: {
-    reminderMin: 5, importText: '', importStatus: '', urlText: '', fetchStatus: '', courseCount: 0,
+    reminderMin: 5, importText: '', importStatus: '', urlText: '', fetchStatus: '', orbitvStatus: '', courseCount: 0,
     reminderOptions: [
       { label: '5分钟', value: 5 },{ label: '10分钟', value: 10 },
       { label: '15分钟', value: 15 },{ label: '30分钟', value: 30 }
@@ -132,6 +139,95 @@ export default {
     } catch (e) { this.importStatus = 'JSON格式错误'; prompt.showToast({ message: 'JSON格式错误' }) }
   },
 
+  fetchOrbitV() {
+    this.orbitvStatus = '正在连接 OrbitV...'
+    const listUrl = 'http://127.0.0.1:23101/book/list'
+    try {
+      fetchApi.fetch({
+        url: listUrl, method: 'GET', responseType: 'json', timeout: 10000,
+        success: (response) => {
+          try {
+            const items = response.data
+            if (items && items.length > 0) {
+              this.orbitvStatus = '发现 ' + items.length + ' 个文件，尝试下载...'
+              this.tryDownloadOrbitVItems(items)
+            } else {
+              this.orbitvStatus = '未找到文件'
+            }
+          } catch (e) {
+            this.orbitvStatus = '无法解析文件列表'
+            this.tryDirectDownload()
+          }
+        },
+        fail: () => {
+          this.orbitvStatus = '连接 OrbitV 失败'
+          prompt.showToast({ message: '请确认手机已打开OrbitV' })
+        },
+      })
+    } catch (e) { this.orbitvStatus = '请求失败' }
+  },
+
+  tryDownloadOrbitVItems(items) {
+    const coursesFile = items.find(i => i.name && (i.name.includes('courses') || i.name.includes('课表') || i.name.endsWith('.txt'))) || items[0]
+    const fileId = coursesFile.id || coursesFile.name
+    const dlUrl = 'http://127.0.0.1:23101/book/download?id=' + encodeURIComponent(fileId)
+    this.downloadOrbitVFile(dlUrl)
+  },
+
+  tryDirectDownload() {
+    const dlUrl = 'http://127.0.0.1:23101/book/download?id=courses.txt'
+    this.downloadOrbitVFile(dlUrl)
+  },
+
+  downloadOrbitVFile(url) {
+    try {
+      fetchApi.fetch({
+        url: url, method: 'GET', responseType: 'text', timeout: 15000,
+        success: (response) => {
+          let text = response.data
+          if (typeof text !== 'string') {
+            try { text = JSON.stringify(text) } catch (e) {}
+          }
+          this.parseAndImport(text)
+        },
+        fail: (data, code) => {
+          this.orbitvStatus = '下载失败, code=' + code
+          prompt.showToast({ message: '下载失败' })
+        },
+      })
+    } catch (e) { this.orbitvStatus = '下载异常' }
+  },
+
+  parseAndImport(text) {
+    let jsonData
+    // Try parsing directly, or find JSON in text
+    try { jsonData = JSON.parse(text) } catch (e) {
+      const match = text.match(/\[[\s\S]*\]/)
+      if (match) { try { jsonData = JSON.parse(match[0]) } catch (e2) {} }
+    }
+    if (!jsonData || !Array.isArray(jsonData)) {
+      this.orbitvStatus = '数据格式不对，未找到JSON课表'
+      prompt.showToast({ message: '文件内容不是有效课表' })
+      return
+    }
+    for (let i = 0; i < jsonData.length; i++) {
+      const c = jsonData[i]
+      if (!c.name || !c.dayOfWeek || !c.startTime || !c.endTime) {
+        this.orbitvStatus = '第' + (i + 1) + '条缺少必填字段'; return
+      }
+      c.id = c.id || ('c_' + Date.now() + '_' + i)
+      c.weeks = c.weeks || [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16]
+      c.color = c.color || '#4CAF50'
+    }
+    let existing = []
+    try { const d = storage.getSync({ key: 'courses' }); if (d) existing = JSON.parse(d) } catch (e) {}
+    const merged = existing.concat(jsonData)
+    storage.set({ key: 'courses', value: JSON.stringify(merged) })
+    this.courseCount = merged.length
+    this.orbitvStatus = '成功导入' + jsonData.length + '门课程'
+    prompt.showToast({ message: 'OrbitV导入成功' })
+  },
+
   clearAllCourses() {
     try { storage.set({ key: 'courses', value: '[]' }); this.courseCount = 0; this.importStatus = ''; prompt.showToast({ message: '已清空所有课程' }) }
     catch (e) { prompt.showToast({ message: '清空失败' }) }
@@ -163,6 +259,8 @@ export default {
 .import-btn-text{color:#fff;font-size:14px}
 .fetch-btn{height:34px;border-radius:17px;background-color:#FF9800;justify-content:center;align-items:center;padding-left:24px;padding-right:24px}
 .fetch-btn-text{color:#fff;font-size:14px}
+.orbitv-btn{height:36px;border-radius:18px;background-color:#9C27B0;justify-content:center;align-items:center;padding-left:24px;padding-right:24px}
+.orbitv-btn-text{color:#fff;font-size:14px}
 .import-status{color:#aaa;font-size:12px;margin-top:4px;text-align:center}
 .count-text{color:#4CAF50;font-size:14px;font-weight:bold}
 .clear-btn{height:36px;border-radius:18px;background-color:#331111;justify-content:center;align-items:center;margin-top:4px}
