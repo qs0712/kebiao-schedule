@@ -53,6 +53,21 @@
         <div class="clear-btn" onclick="clearAllCourses"><text class="clear-btn-text">清空所有课程</text></div>
       </list-item>
     </list>
+
+    <!-- 全屏提醒弹窗 -->
+    <div class="alert-overlay" if="{{ showAlert }}" onclick="dismissAlert">
+      <div class="alert-box" onclick="stopPropagation">
+        <div class="alert-title">{{ alertData.name }}</div>
+        <div class="alert-row"><text class="alert-label">教室</text><text class="alert-value">{{ alertData.location }}</text></div>
+        <div class="alert-row"><text class="alert-label">老师</text><text class="alert-value">{{ alertData.teacher }}</text></div>
+        <div class="alert-footer">
+          <div class="alert-btn" onclick="dismissAlert">
+            <text class="alert-btn-text">我知道了</text>
+          </div>
+          <text class="alert-timer">{{ alertCountdown }}s</text>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -69,6 +84,7 @@ import vibrator from '@blueos.hardware.vibrator.vibrator'
 export default {
   data: {
     reminderMin: 5, importText: '', importStatus: '', urlText: '', fetchStatus: '', orbitvStatus: '', courseCount: 0,
+    showAlert: false, alertData: {}, alertCountdown: 0, alertTimer: null,
     reminderOptions: [
       { label: '5分钟', value: 5 },{ label: '10分钟', value: 10 },
       { label: '15分钟', value: 15 },{ label: '30分钟', value: 30 }
@@ -277,21 +293,25 @@ export default {
   goBack() { router.back() },
 
   testReminder() {
-    prompt.showToast({ message: '测试提醒开始' })
-    notification.publish({
-      request: {
-        icon: '/assets/images/logo.png',
-        contentType: 1,
-        content: { title: '课表提醒测试', text: '通知功能正常' },
-        channel: 2,
-        deliveryTime: Date.now(),
-      },
-      success: function () { prompt.showToast({ message: '通知已发送' }) },
-      fail: function (data, code) { prompt.showToast({ message: '通知失败 code=' + code }) },
-      complete: function () {},
-    })
+    this.showAlert = true
+    this.alertData = {
+      name: '高等数学', location: 'A101教室', teacher: '张老师'
+    }
+    this.alertCountdown = 15
+    if (this.alertTimer) { clearInterval(this.alertTimer); this.alertTimer = null }
+    this.alertTimer = setInterval(() => {
+      this.alertCountdown -= 1
+      if (this.alertCountdown <= 0) { this.dismissAlert() }
+    }, 1000)
     vibrator.vibrate({ mode: 'long' })
   },
+
+  dismissAlert() {
+    this.showAlert = false
+    if (this.alertTimer) { clearInterval(this.alertTimer); this.alertTimer = null }
+  },
+
+  stopPropagation() {},
 }
 </script>
 
@@ -325,4 +345,14 @@ export default {
 .clear-btn-text{color:#f44;font-size:14px}
 .test-btn{height:36px;border-radius:18px;background-color:#4CAF50;justify-content:center;align-items:center;margin-top:4px}
 .test-btn-text{color:#fff;font-size:14px}
+.alert-overlay{position:absolute;width:390px;height:450px;background-color:rgba(0,0,0,0.8);justify-content:center;align-items:center}
+.alert-box{width:340px;background-color:#1a1a2e;border-radius:16px;padding:24px;flex-direction:column;align-items:center}
+.alert-title{color:#4CAF50;font-size:22px;font-weight:bold;margin-bottom:20px}
+.alert-row{flex-direction:row;justify-content:space-between;width:100%;padding:8px 0;border-bottom-width:1px;border-bottom-color:#222}
+.alert-label{color:#888;font-size:15px}
+.alert-value{color:#fff;font-size:15px}
+.alert-footer{flex-direction:column;align-items:center;margin-top:20px;width:100%}
+.alert-btn{width:180px;height:44px;border-radius:22px;background-color:#4CAF50;justify-content:center;align-items:center}
+.alert-btn-text{color:#fff;font-size:16px;font-weight:bold}
+.alert-timer{color:#666;font-size:13px;margin-top:8px}
 </style>
