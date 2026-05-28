@@ -3,8 +3,8 @@
   "name": "课表提醒",
   "author": "吃不饱的小乔",
   "icon": "/assets/images/logo.png",
-  "versionName": "1.1.3",
-  "versionCode": 5,
+  "versionName": "1.1.4",
+  "versionCode": 6,
   "appCategory": ["education"],
   "features": [
     { "name": "blueos.storage.storage" },

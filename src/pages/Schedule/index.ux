@@ -46,9 +46,9 @@
     <!-- 全屏提醒弹窗 -->
     <div class="alert-overlay" if="{{ showAlert }}" onclick="dismissAlert">
       <div class="alert-box" onclick="stopPropagation">
-        <div class="alert-title">{{ alertData.name }}</div>
-        <div class="alert-row"><text class="alert-label">教室</text><text class="alert-value">{{ alertData.location }}</text></div>
-        <div class="alert-row"><text class="alert-label">老师</text><text class="alert-value">{{ alertData.teacher }}</text></div>
+        <text class="alert-title">{{ alertName }}</text>
+        <div class="alert-row"><text class="alert-label">教室</text><text class="alert-value">{{ alertLocation }}</text></div>
+        <div class="alert-row"><text class="alert-label">老师</text><text class="alert-value">{{ alertTeacher }}</text></div>
         <div class="alert-footer">
           <div class="alert-btn" onclick="dismissAlert"><text class="alert-btn-text">我知道了</text></div>
           <text class="alert-timer">{{ alertCountdown }}s</text>
@@ -78,7 +78,7 @@ export default {
     currentDay: 1,
     currentDate: '',
     todayCourses: [],
-    showAlert: false, alertData: {}, alertCountdown: 0,
+    showAlert: false, alertName: '', alertLocation: '', alertTeacher: '', alertCountdown: 0,
     weekdays: [
       { label: '一', value: 1 }, { label: '二', value: 2 }, { label: '三', value: 3 },
       { label: '四', value: 4 }, { label: '五', value: 5 }, { label: '六', value: 6 }, { label: '日', value: 7 }
@@ -186,7 +186,9 @@ export default {
         const nt = (nh < 10 ? '0' : '') + nh + ':' + (nm < 10 ? '0' : '') + nm
         if (nt === cur) {
           this.showAlert = true
-          this.alertData = { name: c.name, location: c.location || '未设置', teacher: c.teacher || '未设置' }
+          this.alertName = c.name
+          this.alertLocation = c.location || '未设置'
+          this.alertTeacher = c.teacher || '未设置'
           this.alertCountdown = 15
           if (this.alertTimer) { clearInterval(this.alertTimer) }
           this.alertTimer = setInterval(() => {
@@ -203,10 +205,6 @@ export default {
   dismissAlert() {
     this.showAlert = false
     if (this.alertTimer) { clearInterval(this.alertTimer); this.alertTimer = null }
-    notification.publish({
-      request: { icon: '/assets/images/logo.png', contentType: 1, content: { title: this.alertData.name || '', text: '已确认' }, channel: 2, deliveryTime: Date.now() },
-      success: function () {}, fail: function () {}, complete: function () {},
-    })
   },
 
   stopPropagation() {},
@@ -252,12 +250,12 @@ export default {
 .btn-text { color: #ffffff; font-size: 14px; }
 .alert-overlay{position:absolute;width:390px;height:450px;background-color:rgba(0,0,0,0.85);justify-content:center;align-items:center}
 .alert-box{width:340px;background-color:#1a1a2e;border-radius:16px;padding:24px;flex-direction:column;align-items:center}
-.alert-title{color:#4CAF50;font-size:22px;font-weight:bold;margin-bottom:20px}
+.alert-title{color:#64B5F6;font-size:22px;font-weight:bold;margin-bottom:20px}
 .alert-row{flex-direction:row;justify-content:space-between;width:100%;padding:8px 0;border-bottom-width:1px;border-bottom-color:#222}
 .alert-label{color:#888;font-size:15px}
 .alert-value{color:#fff;font-size:15px}
 .alert-footer{flex-direction:column;align-items:center;margin-top:20px;width:100%}
-.alert-btn{width:180px;height:44px;border-radius:22px;background-color:#4CAF50;justify-content:center;align-items:center}
+.alert-btn{width:180px;height:44px;border-radius:22px;background-color:#64B5F6;justify-content:center;align-items:center}
 .alert-btn-text{color:#fff;font-size:16px;font-weight:bold}
 .alert-timer{color:#666;font-size:13px;margin-top:8px}
 </style>
