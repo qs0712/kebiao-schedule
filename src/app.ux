@@ -6,38 +6,28 @@
 <script>
 import storage from '@blueos.storage.storage'
 import notification from '@blueos.app.notification.notificationManager'
-import schedule from '@blueos.app.appmanager.schedule'
+import event from '@blueos.app.event.eventManager'
 import vibrator from '@blueos.hardware.vibrator.vibrator'
 
 export default {
   onCreate() {
     console.log('App onCreate')
-    this.setupReminderJob()
+    this.subscribeScreenOn()
   },
 
   onDestroy() {
     console.log('App onDestroy')
   },
 
-  setupReminderJob() {
+  subscribeScreenOn() {
     try {
-      const now = new Date()
-      const nextMin = new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours(), now.getMinutes() + 1, 0, 0)
-      schedule.scheduleJob({
-        type: 1,
-        timeout: nextMin.getTime(),
-        interval: 60000,
-        triggerMethod: 'checkAndNotify',
-        success: function (data) {
-          console.log('scheduleJob success, id=' + data.id)
-        },
-        fail: function (data, code) {
-          console.log('scheduleJob fail, code=' + code)
-        },
-        complete: function () {},
+      event.subscribe({
+        eventName: 'usual.event.SCREEN_ON',
+        callback: () => { this.checkAndNotify() },
       })
+      console.log('screen_on subscribed')
     } catch (e) {
-      console.log('scheduleJob error:', e)
+      console.log('subscribe error:', e)
     }
   },
 
@@ -55,45 +45,32 @@ export default {
 
       const now = new Date()
       const dayOfWeek = now.getDay() === 0 ? 7 : now.getDay()
-      const currentHour = now.getHours()
-      const currentMinute = now.getMinutes()
-      const currentTimeStr = (currentHour < 10 ? '0' : '') + currentHour + ':' + (currentMinute < 10 ? '0' : '') + currentMinute
+      const h = now.getHours(), m = now.getMinutes()
+      const currentTimeStr = (h < 10 ? '0' : '') + h + ':' + (m < 10 ? '0' : '') + m
 
-      const todayCourses = courses.filter(c => c.dayOfWeek === dayOfWeek)
-      todayCourses.sort((a, b) => a.startTime.localeCompare(b.startTime))
-
-      for (const course of todayCourses) {
-        const parts = course.startTime.split(':')
-        const courseHour = parseInt(parts[0])
-        const courseMin = parseInt(parts[1])
-        let notifyMin = courseMin - reminderMin
-        let notifyHour = courseHour
-        if (notifyMin < 0) {
-          notifyMin += 60
-          notifyHour -= 1
-        }
-        if (notifyHour < 0) notifyHour += 24
-        const notifyTimeStr = (notifyHour < 10 ? '0' : '') + notifyHour + ':' + (notifyMin < 10 ? '0' : '') + notifyMin
+      for (const c of courses) {
+        if (c.dayOfWeek !== dayOfWeek) continue
+        const parts = c.startTime.split(':')
+        let nh = parseInt(parts[0]), nm = parseInt(parts[1]) - reminderMin
+        if (nm < 0) { nm += 60; nh -= 1 }
+        if (nh < 0) nh += 24
+        const notifyTimeStr = (nh < 10 ? '0' : '') + nh + ':' + (nm < 10 ? '0' : '') + nm
 
         if (notifyTimeStr === currentTimeStr) {
+          const msg = reminderMin + '分钟后开始' + (c.location ? ' @ ' + c.location : '')
           notification.publish({
             request: {
               icon: '/assets/images/logo.png',
               contentType: 1,
-              content: {
-                title: course.name,
-                text: reminderMin + '分钟后开始' + (course.location ? ' @ ' + course.location : ''),
-              },
+              content: { title: c.name, text: msg },
               channel: 2,
               deliveryTime: Date.now(),
             },
             success: function () {},
-            fail: function (data, code) {
-              console.log('notification fail, code=' + code)
-            },
+            fail: function (data, code) { console.log('notify fail, code=' + code) },
             complete: function () {},
           })
-          try { vibrator.vibrate({ mode: 'long' }) } catch (ve) { console.log('vibrate error:', ve) }
+          try { vibrator.vibrate({ mode: 'long' }) } catch (ve) { console.log('vibr err:', ve) }
           break
         }
       }

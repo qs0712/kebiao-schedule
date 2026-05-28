@@ -49,6 +49,8 @@
 import storage from '@blueos.storage.storage'
 import router from '@blueos.app.appmanager.router'
 import prompt from '@blueos.window.prompt'
+import notification from '@blueos.app.notification.notificationManager'
+import vibrator from '@blueos.hardware.vibrator.vibrator'
 
 var periodRanges = [
   { start:'08:00', end:'08:45' },{ start:'08:55', end:'09:40' },
@@ -76,9 +78,44 @@ export default {
     const month = now.getMonth() + 1
     const date = now.getDate()
     this.currentDate = month + '月' + date + '日'
+    this.checkUpcoming()
   },
 
   onShow() { this.loadCourses() },
+
+  checkUpcoming() {
+    try {
+      const d = storage.getSync({ key: 'courses' })
+      if (!d) return
+      const courses = JSON.parse(d)
+      let rm = 5
+      try { const v = storage.getSync({ key: 'reminderMin' }); if (v) rm = parseInt(v) } catch (e) {}
+      const now = new Date()
+      const dw = now.getDay() === 0 ? 7 : now.getDay()
+      const h = now.getHours(), m = now.getMinutes()
+      const cur = (h < 10 ? '0' : '') + h + ':' + (m < 10 ? '0' : '') + m
+      for (const c of courses) {
+        if (c.dayOfWeek !== dw) continue
+        const ps = c.startTime.split(':')
+        let nh = parseInt(ps[0]), nm = parseInt(ps[1]) - rm
+        if (nm < 0) { nm += 60; nh -= 1 }
+        if (nh < 0) nh += 24
+        const nt = (nh < 10 ? '0' : '') + nh + ':' + (nm < 10 ? '0' : '') + nm
+        if (nt === cur) {
+          notification.publish({
+            request: {
+              icon: '/assets/images/logo.png', contentType: 1,
+              content: { title: c.name, text: rm + '分钟后开始' + (c.location ? ' @ ' + c.location : '') },
+              channel: 2, deliveryTime: Date.now(),
+            },
+            success: function () {}, fail: function (d2, code) { console.log('notify fail', code) }, complete: function () {},
+          })
+          try { vibrator.vibrate({ mode: 'long' }) } catch (ve) { console.log('vibr err:', ve) }
+          break
+        }
+      }
+    } catch (e) { console.log('check error:', e) }
+  },
 
   loadCourses() {
     try {

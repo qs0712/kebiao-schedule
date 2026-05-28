@@ -11,6 +11,7 @@
     { "name": "blueos.app.notification.notificationManager" },
     { "name": "blueos.app.appmanager.schedule" },
     { "name": "blueos.window.prompt" },
+    { "name": "blueos.app.event.eventManager" },
     { "name": "blueos.app.appmanager.router" },
     { "name": "blueos.hardware.vibrator.vibrator" },
     { "name": "blueos.network.fetch" },
@@ -21,7 +22,7 @@
     "designWidth": 390,
     "background": {
       "features": [
-        "blueos.app.appmanager.schedule"
+        "blueos.app.event.eventManager"
       ]
     }
   },
