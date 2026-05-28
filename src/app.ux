@@ -6,29 +6,37 @@
 <script>
 import storage from '@blueos.storage.storage'
 import notification from '@blueos.app.notification.notificationManager'
+import schedule from '@blueos.app.appmanager.schedule'
 import event from '@blueos.app.event.eventManager'
 import vibrator from '@blueos.hardware.vibrator.vibrator'
 
 export default {
   onCreate() {
     console.log('App onCreate')
-    this.subscribeScreenOn()
+    this.setupScheduleJob()
+    try {
+      event.subscribe({ eventName: 'usual.event.SCREEN_ON', callback: () => { this.checkAndNotify() } })
+    } catch (e) { console.log('subscribe error:', e) }
   },
 
   onDestroy() {
     console.log('App onDestroy')
   },
 
-  subscribeScreenOn() {
+  setupScheduleJob() {
     try {
-      event.subscribe({
-        eventName: 'usual.event.SCREEN_ON',
-        callback: () => { this.checkAndNotify() },
+      const now = new Date()
+      const nextMin = new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours(), now.getMinutes() + 1, 0, 0)
+      schedule.scheduleJob({
+        type: 1,
+        timeout: nextMin.getTime(),
+        interval: 60000,
+        triggerMethod: 'checkAndNotify',
+        success: function (data) { console.log('scheduleJob success, id=' + data.id) },
+        fail: function (data, code) { console.log('scheduleJob fail, code=' + code) },
+        complete: function () {},
       })
-      console.log('screen_on subscribed')
-    } catch (e) {
-      console.log('subscribe error:', e)
-    }
+    } catch (e) { console.log('scheduleJob error:', e) }
   },
 
   checkAndNotify() {
@@ -36,47 +44,30 @@ export default {
       const coursesJson = storage.getSync({ key: 'courses' })
       if (!coursesJson) return
       const courses = JSON.parse(coursesJson)
-
-      let reminderMin = 5
-      try {
-        const rm = storage.getSync({ key: 'reminderMin' })
-        if (rm) reminderMin = parseInt(rm)
-      } catch (e) {}
-
+      let rm = 5
+      try { const v = storage.getSync({ key: 'reminderMin' }); if (v) rm = parseInt(v) } catch (e) {}
       const now = new Date()
-      const dayOfWeek = now.getDay() === 0 ? 7 : now.getDay()
+      const dow = now.getDay() === 0 ? 7 : now.getDay()
       const h = now.getHours(), m = now.getMinutes()
-      const currentTimeStr = (h < 10 ? '0' : '') + h + ':' + (m < 10 ? '0' : '') + m
-
+      const cur = (h < 10 ? '0' : '') + h + ':' + (m < 10 ? '0' : '') + m
       for (const c of courses) {
-        if (c.dayOfWeek !== dayOfWeek) continue
-        const parts = c.startTime.split(':')
-        let nh = parseInt(parts[0]), nm = parseInt(parts[1]) - reminderMin
+        if (c.dayOfWeek !== dow) continue
+        const p = c.startTime.split(':')
+        let nh = parseInt(p[0]), nm = parseInt(p[1]) - rm
         if (nm < 0) { nm += 60; nh -= 1 }
         if (nh < 0) nh += 24
-        const notifyTimeStr = (nh < 10 ? '0' : '') + nh + ':' + (nm < 10 ? '0' : '') + nm
-
-        if (notifyTimeStr === currentTimeStr) {
-          const msg = reminderMin + '分钟后开始' + (c.location ? ' @ ' + c.location : '')
+        const nt = (nh < 10 ? '0' : '') + nh + ':' + (nm < 10 ? '0' : '') + nm
+        if (nt === cur) {
+          const msg = rm + '分钟后开始' + (c.location ? ' @ ' + c.location : '')
           notification.publish({
-            request: {
-              icon: '/assets/images/logo.png',
-              contentType: 1,
-              content: { title: c.name, text: msg },
-              channel: 2,
-              deliveryTime: Date.now(),
-            },
-            success: function () {},
-            fail: function (data, code) { console.log('notify fail, code=' + code) },
-            complete: function () {},
+            request: { icon: '/assets/images/logo.png', contentType: 1, content: { title: c.name, text: msg }, channel: 2, deliveryTime: Date.now() },
+            success: function () {}, fail: function (data, code) { console.log('notify fail, code=' + code) }, complete: function () {},
           })
-          try { vibrator.vibrate({ mode: 'long' }) } catch (ve) { console.log('vibr err:', ve) }
+          vibrator.vibrate({ mode: 'long' })
           break
         }
       }
-    } catch (e) {
-      console.log('checkAndNotify error:', e)
-    }
+    } catch (e) { console.log('checkAndNotify error:', e) }
   }
 }
 </script>

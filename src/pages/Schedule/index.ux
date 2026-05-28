@@ -81,7 +81,16 @@ export default {
     this.checkUpcoming()
   },
 
-  onShow() { this.loadCourses() },
+  onShow() {
+    this.loadCourses()
+    this.checkReminder()
+    if (this.reminderTimer) clearInterval(this.reminderTimer)
+    this.reminderTimer = setInterval(() => { this.checkReminder() }, 60000)
+  },
+
+  onHide() {
+    if (this.reminderTimer) { clearInterval(this.reminderTimer); this.reminderTimer = null }
+  },
 
   checkUpcoming() {
     try {
@@ -142,6 +151,37 @@ export default {
 
   switchDay(day) { this.$set('currentDay', day); this.filterTodayCourses() },
   goSettings() { router.push({ uri: 'pages/Settings' }) },
+
+  checkReminder() {
+    try {
+      const json = storage.getSync({ key: 'courses' })
+      if (!json) return
+      const courses = JSON.parse(json)
+      let rm = 5
+      try { const v = storage.getSync({ key: 'reminderMin' }); if (v) rm = parseInt(v) } catch (e) {}
+      const now = new Date()
+      const dow = now.getDay() === 0 ? 7 : now.getDay()
+      const h = now.getHours(), m = now.getMinutes()
+      const cur = (h < 10 ? '0' : '') + h + ':' + (m < 10 ? '0' : '') + m
+      for (const c of courses) {
+        if (c.dayOfWeek !== dow) continue
+        const p = c.startTime.split(':')
+        let nh = parseInt(p[0]), nm = parseInt(p[1]) - rm
+        if (nm < 0) { nm += 60; nh -= 1 }
+        if (nh < 0) nh += 24
+        const nt = (nh < 10 ? '0' : '') + nh + ':' + (nm < 10 ? '0' : '') + nm
+        if (nt === cur) {
+          const msg = rm + '分钟后开始' + (c.location ? ' @ ' + c.location : '')
+          notification.publish({
+            request: { icon: '/assets/images/logo.png', contentType: 1, content: { title: c.name, text: msg }, channel: 2, deliveryTime: Date.now() },
+            success: function () {}, fail: function () {}, complete: function () {},
+          })
+          vibrator.vibrate({ mode: 'long' })
+          break
+        }
+      }
+    } catch (e) {}
+  },
 
   deleteCourse(id, evt) {
     if (evt) { evt.stopPropagation && evt.stopPropagation() }
